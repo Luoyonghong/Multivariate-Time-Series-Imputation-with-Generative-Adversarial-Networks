@@ -1,0 +1,6 @@
+epoch
+disc-iters
+batch-size
+z-dim
+lr
+impute-iter
