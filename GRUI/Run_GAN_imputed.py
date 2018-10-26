@@ -17,10 +17,10 @@ import gru_delta_forGAN
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='manual to this script')
     parser.add_argument('--gpus', type=str, default = None)
-    parser.add_argument('--batch-size', type=int, default=32)
+    parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--run-type', type=str, default='test')
-    parser.add_argument('--data-path', type=str, default="/Users/luoyonghong/tensorflow_works/Gan_Imputation/imputation_train_results/35-0.001-1400-18/")
-    #输入填充之后的训练数据集的完整路径
+    parser.add_argument('--data-path', type=str, default="../Gan_Imputation/imputation_train_results/WGAN_no_mask/")
+    #输入填充之后的训练数据集的完整路径 Gan_Imputation/imputation_train_results/WGAN_no_mask/30_8_128_64_0.001_400_True_True_True_0.15_0.5
     parser.add_argument('--model-path', type=str, default=None)
     parser.add_argument('--result-path', type=str, default=None)
     parser.add_argument('--lr', type=float, default=0.01)
@@ -28,9 +28,9 @@ if __name__ == '__main__':
     parser.add_argument('--n-inputs', type=int, default=41)
     parser.add_argument('--n-hidden-units', type=int, default=64)
     parser.add_argument('--n-classes', type=int, default=2)
-    parser.add_argument('--checkpoint-dir', type=str, default='checkpoint_physionet_imputed/new',
+    parser.add_argument('--checkpoint-dir', type=str, default='checkpoint_physionet_imputed',
                         help='Directory name to save the checkpoints')
-    parser.add_argument('--log-dir', type=str, default='logs_physionet_imputed/new',
+    parser.add_argument('--log-dir', type=str, default='logs_physionet_imputed',
                         help='Directory name to save training logs')
     parser.add_argument('--isNormal',type=int,default=1)
     parser.add_argument('--isSlicing',type=int,default=1)
@@ -52,24 +52,6 @@ if __name__ == '__main__':
     if args.isSlicing==1:
             args.isSlicing=True
             
-    if "impute_zero" in args.data_path:
-        args.log_dir="logs_physionet_imputed_zero"
-        args.checkpoint_dir="checkpoint_physionet_imputed_zero"
-    if "random_impute" in args.data_path:
-        args.log_dir="logs_physionet_imputed_random"
-        args.checkpoint_dir="checkpoint_physionet_imputed_random"
-    if "no_mask" in args.data_path:
-        args.log_dir="logs_physionet_imputed_nomask"
-        args.checkpoint_dir="checkpoint_physionet_imputed_nomask"
-        if "no_mask_add_noise" in args.data_path:
-            args.log_dir="logs_physionet_imputed_nomask_addnoise"
-            args.checkpoint_dir="checkpoint_physionet_imputed_nomask_addnoise"
-        if "dropout_0.7" in args.data_path:
-            args.log_dir="logs_physionet_imputed_nomask_dropout_0.7"
-            args.checkpoint_dir="checkpoint_physionet_imputed_nomask_dropout_0.7"
-        if "dropout_0.4" in args.data_path:
-            args.log_dir="logs_physionet_imputed_nomask_dropout_0.4"
-            args.checkpoint_dir="checkpoint_physionet_imputed_nomask_dropout_0.4"
     
     checkdir=args.checkpoint_dir
     logdir=args.log_dir
@@ -91,18 +73,19 @@ if __name__ == '__main__':
         dt_test=readImputed.ReadImputedPhysionetData(args.data_path.replace("imputation_train_results","imputation_test_results"))
         dt_test.load()
           
-        lrs=[0.005,0.008,0.01,0.012,0.015]
+        lrs=[0.004,0.003,0.005,0.006,0.007,0.008,0.009,0.01,0.012,0.015]
+        #lrs = [0.006,0.007]
         for lr in lrs:
             args.lr=lr
             epoch=2
-            while epoch<31:
+            while epoch<18:
                 args.epoch=epoch
                 print("epoch: %2d"%(epoch))
                 tf.reset_default_graph()
                 config = tf.ConfigProto() 
                 config.gpu_options.allow_growth = True 
                 with tf.Session(config=config) as sess:
-                    model = gru_delta_forGAN.grud(sess,
+                    model = gru_delta_forGAN.grui(sess,
                                 args=args,
                                 dataset=dt_train,
                                 )
