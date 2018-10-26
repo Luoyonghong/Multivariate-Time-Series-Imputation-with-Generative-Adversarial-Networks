@@ -3,12 +3,12 @@
 """
 Created on Fri Feb  2 13:54:53 2018
 
-@author: lyh
+@author: yonghong, luo
 """
 from __future__ import print_function
 import sys
 sys.path.append("..")
-import WGAN_Phy
+import WGAN_GRUI 
 import tensorflow as tf
 import argparse
 import numpy as np
@@ -25,7 +25,7 @@ def main():
     parser.add_argument('--impute-iter', type=int, default=400)
     parser.add_argument('--pretrain-epoch', type=int, default=5)
     parser.add_argument('--run-type', type=str, default='train')
-    parser.add_argument('--data-path', type=str, default=None)
+    parser.add_argument('--data-path', type=str, default="../set-a/")
     parser.add_argument('--model-path', type=str, default=None)
     parser.add_argument('--result-path', type=str, default=None)
     parser.add_argument('--dataset-name', type=str, default=None)
@@ -96,13 +96,6 @@ def main():
                     gan.train()
                     print(" [*] Training finished!")
                     
-                    """
-                    t_vars = tf.trainable_variables()
-                    var_count=1
-                    for var in t_vars:
-                        np.savetxt(var.name.replace("/","").replace(":","")+".csv", sess.run(var), delimiter=",")
-                        var_count+=1
-                    """
                     gan.imputation(dt_train,True)
                     
                     print(" [*] Train dataset Imputation finished!")

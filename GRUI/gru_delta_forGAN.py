@@ -17,8 +17,8 @@ import tensorflow as tf
 from tensorflow.python.ops import math_ops
 tf.set_random_seed(1)   # set random seed
  
-class grud(object):
-    model_name = "GRU_Delta"
+class grui(object):
+    model_name = "GRU_I"
     def __init__(self, sess, args, dataset):
         self.lr = args.lr            
         self.sess=sess
@@ -65,7 +65,7 @@ class grud(object):
         # lastvalues: batches * steps, n_inputs  last obsevation value of x, if x is missing
         # if lastvalues is zero, take mean as it
         
-         with tf.variable_scope("grud", reuse=reuse):
+         with tf.variable_scope("grui", reuse=reuse):
            
             # then wr_x should be transformed into a diag matrix:tf.matrix_diag(wr_x)
             wr_h=tf.get_variable('wr_h',shape=[self.n_inputs,self.n_hidden_units],initializer=tf.random_normal_initializer())

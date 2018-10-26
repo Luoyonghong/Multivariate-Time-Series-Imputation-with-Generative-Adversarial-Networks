@@ -8,7 +8,7 @@ import numpy as np
 from tensorflow.python.ops import math_ops
 from ops import *
 from utils import *
-from GRUD import mygru_cell
+from GRUI import mygru_cell
 
 """
 D输入标准化， 不要m 填充0
@@ -258,7 +258,7 @@ class WGAN(object):
         Pre_out=self.pretrainG(self.x, self.m, self.deltaPre,  self.mean,\
                                                       self.lastvalues, self.x_lengths,self.keep_prob, \
                                                       is_training=True, reuse=False)
-        # 每个序列length不一样，除的时候考虑只除length长度
+        
         self.pretrain_loss=tf.reduce_sum(tf.square(tf.multiply(Pre_out,self.m)-self.x)) / tf.cast(tf.reduce_sum(self.x_lengths),tf.float32)
         
         #discriminator( X, M, DeltaPre, Lastvalues ,DeltaSub ,SubValues , Mean,  X_lengths,Keep_prob, is_training=True, reuse=False, isTdata=True):
@@ -296,6 +296,7 @@ class WGAN(object):
         
         self.impute_out=impute_out
         
+        #the imputed results
         self.imputed=tf.multiply((1-self.m),self.impute_out)+self.x
         # get loss for discriminator
         d_loss_real = - tf.reduce_mean(D_real_logits)
@@ -314,6 +315,7 @@ class WGAN(object):
         d_vars = [var for var in t_vars if 'd_' in var.name]
         g_vars = [var for var in t_vars if 'g_' in var.name]
         z_vars = [self.z_need_tune]
+        '''
         print("d vars:")
         for v in d_vars:
             print(v.name)
@@ -323,9 +325,9 @@ class WGAN(object):
         print("z vars:")
         for v in z_vars:
             print(v.name)
+        '''
         
-        
-        #正则化 由于有了dropout 不需要正则化
+        #don't need normalization because we have adopted the dropout
         """
         ld = 0.0
         for w in d_vars:
@@ -353,7 +355,9 @@ class WGAN(object):
                     .minimize(self.impute_loss,var_list=z_vars)
     
         
-        print(0.01)
+        
+
+        #clip weight
         self.clip_all_vals = [p.assign(tf.clip_by_value(p, -0.99, 0.99)) for p in t_vars]
         self.clip_D = [p.assign(tf.clip_by_value(p, -0.99, 0.99)) for p in d_vars]
         self.clip_G = [p.assign(tf.clip_by_value(p, -0.99, 0.99)) for p in g_vars]
@@ -549,7 +553,6 @@ class WGAN(object):
         tf.variables_initializer([self.z_need_tune]).run()
         #是否shuffle无所谓，填充之后存起来，测试的时候用填充之后的数据再shuffle即可
         #训练数据集不能被batch_size整除剩下的部分，扔掉
-        #times保存的是文件i的病人时间序列，没有变成差值，单位是分
         start_time = time.time()
         batchid=1
         impute_tune_time=1

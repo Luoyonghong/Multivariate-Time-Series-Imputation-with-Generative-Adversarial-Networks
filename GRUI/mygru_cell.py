@@ -3,7 +3,7 @@
 """
 Created on Thu Jan 25 23:13:29 2018
 
-@author: lyh
+@author: yonghong, luo
 """
 
 from __future__ import absolute_import
