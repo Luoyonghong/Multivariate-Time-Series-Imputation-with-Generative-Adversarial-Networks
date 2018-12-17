@@ -74,6 +74,7 @@ if __name__ == '__main__':
         dt_test.load()
           
         lrs=[0.004,0.003,0.005,0.006,0.007,0.008,0.009,0.01,0.012,0.015]
+        max_auc = 0.0
         #lrs = [0.006,0.007]
         for lr in lrs:
             args.lr=lr
@@ -110,8 +111,11 @@ if __name__ == '__main__':
                     f=open(os.path.join(args.checkpoint_dir, model_dir, "result"),"a+")
                     f.write("epoch: "+str(epoch)+","+str(acc)+","+str(auc)+"\r\n")
                     f.close()
+                    if auc > max_auc:
+                        max_auc = auc 
                     
                 epoch+=1
                 print("")
+        print("max auc is: " + str(max_auc))
 
 
