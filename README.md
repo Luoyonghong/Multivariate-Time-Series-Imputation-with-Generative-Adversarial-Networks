@@ -8,5 +8,5 @@
  
 ### Go to GRUI floder
 Excute the Run_GAN_imputed.py file, then one floder-"checkpoint_physionet_imputed" will be created, go to the "checkpoint_physionet_imputed/30_8_128_64_0.001_400_True_True_True_0.15_0.5" floder, find "result" file, the "result" file stands for the mortality prediction results by The RNN classifier trained on the GAN imputed dataset. The first column is epoch, the second column is accuracy and the last column is the AUC score.
-### Result file location
+### Final result file location
 GRUI/max_auc  is the file that record final auc score
