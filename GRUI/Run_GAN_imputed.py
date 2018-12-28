@@ -117,5 +117,8 @@ if __name__ == '__main__':
                 epoch+=1
                 print("")
         print("max auc is: " + str(max_auc))
+        f2 = open("max_auc",w)
+        f2.write(max_auc)
+        f2.close()
 
 
