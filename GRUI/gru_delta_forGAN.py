@@ -19,13 +19,14 @@ tf.set_random_seed(1)   # set random seed
  
 class grui(object):
     model_name = "GRU_I"
-    def __init__(self, sess, args, dataset):
+    def __init__(self, sess, args, dataset, test_set):
         self.lr = args.lr            
         self.sess=sess
         self.isbatch_normal=args.isBatch_normal
         self.isNormal=args.isNormal
         self.isSlicing=args.isSlicing
         self.dataset=dataset
+        self.test_set = test_set
         self.epoch = args.epoch     
         self.batch_size = args.batch_size
         self.n_inputs = args.n_inputs                 # MNIST data input (img shape: 28*28)
@@ -123,35 +124,33 @@ class grui(object):
         
         self.correct_pred = tf.equal(tf.argmax(self.pred, 1), tf.argmax(self.y, 1))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_pred, tf.float32))
-        self.saver = tf.train.Saver()
+        self.saver = tf.train.Saver(max_to_keep=None)
         
         loss_sum = tf.summary.scalar("loss", self.cross_entropy)
         acc_sum = tf.summary.scalar("acc", self.accuracy)
         
         self.sum=tf.summary.merge([loss_sum, acc_sum])
-        self.writer = tf.summary.FileWriter(self.log_dir + '/' + self.model_dir, self.sess.graph)
         
         
-    @property
-    def model_dir(self):
+    def model_dir(self,epoch):
         return "{}_{}_{}_{}_{}_{}/epoch{}".format(
             self.model_name, self.lr,
             self.batch_size, self.isNormal,
             self.isbatch_normal,self.isSlicing,
-            self.epoch
+            epoch
             )
         
-    def save(self, checkpoint_dir, step):
-        checkpoint_dir = os.path.join(checkpoint_dir, self.model_dir, self.model_name)
+    def save(self, checkpoint_dir, step, epoch):
+        checkpoint_dir = os.path.join(checkpoint_dir, self.model_dir(epoch), self.model_name)
 
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
 
         self.saver.save(self.sess,os.path.join(checkpoint_dir, self.model_name+'.model'), global_step=step)
 
-    def load(self, checkpoint_dir):
+    def load(self, checkpoint_dir, epoch):
         import re
-        checkpoint_dir = os.path.join(checkpoint_dir, self.model_dir, self.model_name)
+        checkpoint_dir = os.path.join(checkpoint_dir, self.model_dir(epoch), self.model_name)
 
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
         if ckpt and ckpt.model_checkpoint_path:
@@ -166,37 +165,37 @@ class grui(object):
     
     def train(self):
         
-        could_load, checkpoint_counter = self.load(self.checkpoint_dir)
-        if could_load:
-            start_epoch = (int)(checkpoint_counter / self.num_batches)
-            #start_batch_id = checkpoint_counter - start_epoch * self.num_batches
-            start_batch_id=0
-            #counter = checkpoint_counter
-            counter=start_epoch*self.num_batches
-            print(" [*] Load SUCCESS")
-            return 
+        max_auc = 0.5
+        model_dir2= "{}_{}_{}_{}_{}_{}".format(
+            self.model_name, self.lr, 
+            self.batch_size, self.isNormal,
+            self.isbatch_normal,self.isSlicing
+            )
+        if not os.path.exists(os.path.join(self.checkpoint_dir, model_dir2)):
+            os.makedirs(os.path.join(self.checkpoint_dir, model_dir2))
+        result_file=open(os.path.join(self.checkpoint_dir, model_dir2, "result"),"a+")
+        
+        if os.path.exists(os.path.join(self.checkpoint_dir, self.model_dir(self.epoch), self.model_name)):
+            for nowepoch in range(1,self.epoch+1):
+                print(" [*] Load SUCCESS")
+                print("epoch: "+str(nowepoch))
+                self.load(self.checkpoint_dir,nowepoch)
+                acc,auc,model_name=self.test(self.test_set,nowepoch)
+                if auc > max_auc :
+                    max_auc = auc 
+                result_file.write("epoch: "+str(nowepoch)+","+str(acc)+","+str(auc)+"\r\n")
+                print("")
+            result_file.close()
+            return max_auc 
         else:
             # initialize all variables
             tf.global_variables_initializer().run()
             counter = 1
             print(" [!] Load failed...")
+
         start_time=time.time()
         idx = 0
         epochcount=0
-        # X: batches * steps, n_inputs 2*3*2
-        # m:batches * steps, n_inputs
-        # delta:batches * steps, n_inputs
-        # mean:n_inputs  mean of all observations, not contian the imputations
-        # lastvalues: batches * steps, n_inputs  last obsevation value of x, if x is missing
-        # if lastvalues is zero, take mean as it
-        # assume series1's time: 0,0.8,2 ;series2's time:0,1
-        #data_x=[[[1,0],[3,2],[2,0]],[[0,2],[1,1],[0,0]]]
-        #data_y=[[1,0],[0,1]]
-        #data_m=[[[1,0],[1,1],[1,0]],[[0,1],[1,1],[0,0]]]
-        #data_delta=[[[0,0],[0.8,0.8],[1.2,1.2]],[[0,0],[1,1],[0,0]]]
-        #data_mean=[1.75,1.66667]
-        #data_lastvalues=[[[1,1.66667],[3,2],[2,2]],[[1.75,2],[1,1],[0,0]]]
-        #data_x_lengths=[3,2]
         dataset=self.dataset
         while epochcount<self.epoch:
             dataset.shuffle(self.batch_size,True)
@@ -211,20 +210,23 @@ class grui(object):
                     self.lastvalues: data_lastvalues,\
                     self.keep_prob: 0.5})
         
-                self.writer.add_summary(summary_str, counter)
                 counter += 1
                 idx+=1
-                """
-                if counter%10==0:
-                    print("Epoch: [%2d] [%4d/%4d] time: %4.4f, loss: %.8f, acc: %.8f " \
-                              % (epochcount, idx, self.num_batches, time.time() - start_time, loss, acc))
-                """
             epochcount+=1
             idx=0
-        #print("Optimization Finished! save model!")
-        self.save(self.checkpoint_dir, counter)
+            #print("Optimization Finished! save model!")
+            self.save(self.checkpoint_dir, counter, epochcount)
+
+            acc,auc,model_name=self.test(self.test_set,epochcount)
+            if auc > max_auc :
+                max_auc = auc 
+            result_file.write("epoch: "+str(epochcount)+","+str(acc)+","+str(auc)+"\r\n")
+            print("")
+
+        result_file.close()
+        return max_auc 
         
-    def test(self,dataset):
+    def test(self,dataset, epoch):
         start_time=time.time()
         counter=0
         dataset.shuffle(self.batch_size,False)
@@ -242,7 +244,6 @@ class grui(object):
                 self.lastvalues: data_lastvalues,\
                 self.keep_prob: 1.0})
     
-            self.writer.add_summary(summary_str, counter)
             try:
                 auc = metrics.roc_auc_score(np.array(data_y),np.array(pred))
                 totalauc+=auc
@@ -260,8 +261,8 @@ class grui(object):
             totalauc=totalauc/auccounter
         except:
             pass
-        print("Total acc: %.8f, Total auc: %.8f , counter is : %.2f , auccounter is %.2f" % (totalacc,totalauc,counter,auccounter))
-        f=open(os.path.join(self.checkpoint_dir, self.model_dir, self.model_name,"final_acc_and_auc"),"w")
+        print("epoch is : %2.2f, Total acc: %.8f, Total auc: %.8f , counter is : %.2f , auccounter is %.2f" % (epoch, totalacc,totalauc,counter,auccounter))
+        f=open(os.path.join(self.checkpoint_dir, self.model_dir(epoch), self.model_name,"final_acc_and_auc"),"w")
         f.write(str(totalacc)+","+str(totalauc))
         f.close()
         return totalacc,totalauc,self.model_name

@@ -57,6 +57,7 @@ if __name__ == '__main__':
     logdir=args.log_dir
     base=args.data_path
     data_paths=["30_8_128_64_0.001_400_True_True_True_0.15_0.5"]
+    max_auc = 0.0
     for d in data_paths:
         args.data_path=os.path.join(base,d)
         path_splits=args.data_path.split("/")
@@ -74,51 +75,33 @@ if __name__ == '__main__':
         dt_test.load()
           
         lrs=[0.004,0.003,0.005,0.006,0.007,0.008,0.009,0.01,0.012,0.015]
-        max_auc = 0.0
-        #lrs = [0.006,0.007]
+        #lrs = [0.0075,0.0085]
         for lr in lrs:
             args.lr=lr
-            epoch=2
-            while epoch<18:
-                args.epoch=epoch
-                print("epoch: %2d"%(epoch))
-                tf.reset_default_graph()
-                config = tf.ConfigProto() 
-                config.gpu_options.allow_growth = True 
-                with tf.Session(config=config) as sess:
-                    model = gru_delta_forGAN.grui(sess,
-                                args=args,
-                                dataset=dt_train,
-                                )
+            epoch=30
+            args.epoch=epoch
+            print("epoch: %2d"%(epoch))
+            tf.reset_default_graph()
+            config = tf.ConfigProto() 
+            config.gpu_options.allow_growth = True 
+            with tf.Session(config=config) as sess:
+                model = gru_delta_forGAN.grui(sess,
+                            args=args,
+                            dataset=dt_train,
+                            test_set = dt_test
+                            )
             
-                    # build graph
-                    model.build()
+                # build graph
+                model.build()
             
-                    model.train()
-                    print(" [*] Training finished!")
-                    #todo: should use test dataset!
-                    acc,auc,model_name=model.test(dt_test)
-                    # visualize learned generator
-                    #gan.visualize_results(args.epoch-1)
-                    print(" [*] Test finished!")
-                    
-                    model_dir= "{}_{}_{}_{}_{}_{}".format(
-                    model_name, args.lr,
-                    args.batch_size, args.isNormal,
-                    args.isBatch_normal,args.isSlicing,
-                    )
-                    
-                    f=open(os.path.join(args.checkpoint_dir, model_dir, "result"),"a+")
-                    f.write("epoch: "+str(epoch)+","+str(acc)+","+str(auc)+"\r\n")
-                    f.close()
-                    if auc > max_auc:
-                        max_auc = auc 
-                    
-                epoch+=1
-                print("")
+                auc = model.train()
+                if auc > max_auc:
+                    max_auc = auc 
+                
+            print("")
         print("max auc is: " + str(max_auc))
-        f2 = open("max_auc",w)
-        f2.write(max_auc)
+        f2 = open("max_auc","w")
+        f2.write(str(max_auc))
         f2.close()
 
 
